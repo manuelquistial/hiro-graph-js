@@ -1,17 +1,17 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "lib": ["es6"],
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "strictNullChecks": true,
-        "strictFunctionTypes": true,
-        "baseUrl": "../",
-        "typeRoots": ["../"],
-        "noEmit": true,
-        "forceConsistentCasingInFileNames": true,
-        "moduleResolution": "node",
-        "allowSyntheticDefaultImports": true
-    },
-    "files": ["index.d.ts"]
+  "compilerOptions": {
+    "module": "commonjs",
+    "lib": ["es6"],
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "baseUrl": "../",
+    "typeRoots": ["../"],
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
+  },
+  "exclude": ["node_modules"]
 }
