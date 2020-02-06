@@ -23,6 +23,7 @@ import timer from './timer';
 
 import authServlet from './servlets/auth';
 import apiServlet from './servlets/api';
+import { createLuceneQuery } from './lucene';
 
 const passthru = (fn) => [
     (r) => (fn(), r),
@@ -442,11 +443,29 @@ export default class Client {
         } = {},
         reqOptions = {},
     ) {
+        let parsedQuery = '';
+        let additional = {};
+
+        // Use query string and placeholders if given
+        if (typeof query === 'string') {
+            parsedQuery = query;
+            additional = placeholders;
+        } else {
+            // Otherwise create query string and placeholders
+            const { querystring, placeholders: p } = createLuceneQuery(query);
+
+            parsedQuery = querystring;
+            additional = {
+                ...p,
+                ...placeholders,
+            };
+        }
+
         const body = {
-            query,
+            query: parsedQuery,
             limit,
             offset,
-            ...placeholders,
+            ...additional,
         };
 
         if (count) {
