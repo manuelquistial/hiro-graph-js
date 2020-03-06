@@ -1,0 +1,55 @@
+import Paths from '../paths';
+import { lucene, Lucene } from '../lucene';
+import { gremlin, GremlinQuery, GremlinQueryBuilder } from '../gremlin';
+
+import { API } from './api';
+
+export interface LuceneQueryOptions {
+  limit?: number;
+  offset?: number;
+}
+
+export interface GremlinQueryOptions {
+  limit?: number;
+  offset?: number;
+}
+
+type GremlinQueryFunction = (
+  gremlin: GremlinQueryBuilder,
+) => GremlinQueryBuilder;
+
+export class Query extends API {
+  lucene<T>(query: Lucene.Query, options: LuceneQueryOptions = {}) {
+    const { querystring, placeholders } = lucene(query);
+
+    const path = Paths.get().graph + '/query/vertices';
+
+    return this.request<T>(path, {
+      method: 'POST',
+      json: {
+        query: querystring,
+        ...options,
+        ...placeholders,
+      },
+    });
+  }
+  gremlin<T>(
+    root: string,
+    query: GremlinQuery | GremlinQueryFunction,
+    options: GremlinQueryOptions = {},
+  ) {
+    const _query =
+      typeof query === 'function' ? query(gremlin('')) : gremlin(query);
+
+    const path = Paths.get().graph + '/query/gremlin';
+
+    return this.request<T>(path, {
+      method: 'POST',
+      json: {
+        root,
+        query: _query.toString(),
+        ...options,
+      },
+    });
+  }
+}
