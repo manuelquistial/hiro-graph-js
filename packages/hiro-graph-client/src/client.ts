@@ -27,6 +27,8 @@ export type ApiRequest = RequestInit & { json?: object };
 
 export class Client {
   readonly config: Config;
+
+  // @todo Move token to rxjs subject
   private readonly token: string = '';
   private connections: Partial<
     Record<WebsocketAPI, WebSocketSubject<any>>
@@ -90,6 +92,7 @@ export class Client {
         protocol: ['graph-2.0.0', `token-${this.token}`],
       });
 
+      // @todo ensure full open/close awareness
       connection
         .pipe(
           catchError((err) => {
@@ -108,7 +111,7 @@ export class Client {
       throw Error(`No connection exists for ${api}`);
     }
 
-    const id = '1';
+    const id = '1'; // @todo add ids
 
     const subject$ = new Subject<{
       id: string;
