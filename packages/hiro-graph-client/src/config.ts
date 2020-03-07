@@ -2,14 +2,7 @@ import { ensureSlash } from './utils';
 
 export type WebsocketAPI = 'events' | 'graph';
 
-export type HttpAPI =
-  | 'app'
-  | 'auth'
-  | 'events'
-  | 'graph'
-  | 'iam'
-  | 'ki'
-  | 'variables';
+export type HttpAPI = 'app' | 'auth' | 'graph' | 'iam' | 'ki' | 'variables';
 
 interface APIs {
   http: Record<HttpAPI, string>;
@@ -31,7 +24,6 @@ export class Config {
     http: {
       app: '/api/app/7.0',
       auth: '/api/auth/6.1',
-      events: '/api/events-ws/6.1',
       graph: '/api/graph/7.1',
       iam: '/api/iam/6.1',
       ki: '/api/ki/6',
@@ -39,7 +31,7 @@ export class Config {
     },
     ws: {
       events: '/api/events-ws/6.1',
-      graph: '/api/graph-ws/7.1',
+      graph: '/api/graph-ws/6.1',
     },
   };
 
@@ -60,4 +52,18 @@ export class Config {
       }
     }
   }
+
+  getUrl<T extends 'ws' | 'http'>(type: T, api: GetAPIType<T>, path?: string) {
+    const baseUrl =
+      type === 'ws' ? this.endpoint.replace(/^http/, 'ws') : this.endpoint;
+
+    // @ts-ignore
+    return baseUrl + this.apis[type][api] + ensureSlash(path);
+  }
 }
+
+type GetAPIType<T> = T extends 'ws'
+  ? WebsocketAPI
+  : T extends 'http'
+  ? HttpAPI
+  : undefined;

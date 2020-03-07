@@ -1,5 +1,8 @@
-import { Observable } from 'rxjs';
+import { Observable, of, Subject, BehaviorSubject } from 'rxjs';
+import { map, filter, catchError } from 'rxjs/operators';
+import { WebSocketSubject, webSocket } from 'rxjs/webSocket';
 import fetch from 'isomorphic-fetch';
+import { w3cwebsocket } from 'websocket';
 
 import { lucene, Lucene } from './lucene';
 import { Config, ConfigOptions, HttpAPI, WebsocketAPI } from './config';
@@ -25,6 +28,9 @@ export type ApiRequest = RequestInit & { json?: object };
 export class Client {
   readonly config: Config;
   private readonly token: string = '';
+  private connections: Partial<
+    Record<WebsocketAPI, WebSocketSubject<any>>
+  > = {};
 
   constructor(endpointOrOptions: string | ConfigOptions, token?: string) {
     if (token) {
@@ -69,17 +75,102 @@ export class Client {
     });
   }
 
+  request<T>(
+    api: WebsocketAPI,
+    type: string,
+    body: object,
+    headers: object = {},
+  ) {
+    let connection: WebSocketSubject<any>;
+
+    if (!this.connections[api]) {
+      connection = webSocket({
+        url: this.config.getUrl('ws', api),
+        WebSocketCtor: w3cwebsocket as any,
+        protocol: ['graph-2.0.0', `token-${this.token}`],
+      });
+
+      connection
+        .pipe(
+          catchError((err) => {
+            // Catch bad connection close
+            throw { error: { message: err.reason, code: err.code } };
+          }),
+        )
+        .subscribe();
+
+      this.connections[api] = connection;
+    } else {
+      connection = this.connections[api] as any;
+    }
+
+    if (!connection) {
+      throw Error(`No connection exists for ${api}`);
+    }
+
+    const id = '1';
+
+    const subject$ = new Subject<{
+      id: string;
+      more: boolean;
+      multi: boolean;
+      body: T;
+    }>();
+
+    connection
+      .pipe(
+        map((res) => {
+          // Ensure errors are thrown
+          if (res.error) {
+            throw res;
+          }
+
+          return res as {
+            id: string;
+            more: boolean;
+            multi: boolean;
+            body: T;
+          };
+        }),
+        filter((res) => res.id === id),
+      )
+      .subscribe({
+        next: (res) => {
+          subject$.next(res);
+
+          if (!res.more) {
+            subject$.complete();
+          }
+        },
+        error: (err) => subject$.error(err),
+      });
+
+    connection.next({
+      _TOKEN: this.token,
+      id,
+      type,
+      headers,
+      body,
+    });
+
+    return subject$;
+  }
+
   lucene<T>(query: Lucene.Query, options: LuceneQueryOptions = {}) {
     const { querystring, placeholders } = lucene(query);
 
-    return this.fetch<T>('graph', '/query/vertices', {
-      method: 'POST',
-      json: {
+    return this.request<T>(
+      'graph',
+      'query',
+      {
         query: querystring,
         ...options,
         ...placeholders,
       },
-    });
+      {
+        type: 'vertices',
+      },
+    );
   }
 
   gremlin<T>(
@@ -90,13 +181,17 @@ export class Client {
     const _query =
       typeof query === 'function' ? query(gremlin('')) : gremlin(query);
 
-    return this.fetch<T>('graph', '/query/gremlin', {
-      method: 'POST',
-      json: {
+    return this.request<T>(
+      'graph',
+      'query',
+      {
         root,
         query: _query.toString(),
         ...options,
       },
-    });
+      {
+        type: 'gremlin',
+      },
+    );
   }
 }
