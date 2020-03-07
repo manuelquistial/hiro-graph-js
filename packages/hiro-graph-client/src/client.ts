@@ -1,4 +1,5 @@
 import { Observable, of, Subject, BehaviorSubject } from 'rxjs';
+import { v4 as uuid } from 'uuid';
 import { map, filter, catchError } from 'rxjs/operators';
 import { WebSocketSubject, webSocket } from 'rxjs/webSocket';
 import fetch from 'isomorphic-fetch';
@@ -111,13 +112,13 @@ export class Client {
       throw Error(`No connection exists for ${api}`);
     }
 
-    const id = '1'; // @todo add ids
+    const id = uuid();
 
     const subject$ = new Subject<{
       id: string;
       more: boolean;
       multi: boolean;
-      body: T;
+      body: T | null;
     }>();
 
     connection
@@ -128,12 +129,7 @@ export class Client {
             throw res;
           }
 
-          return res as {
-            id: string;
-            more: boolean;
-            multi: boolean;
-            body: T;
-          };
+          return res;
         }),
         filter((res) => res.id === id),
       )

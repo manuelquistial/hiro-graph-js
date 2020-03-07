@@ -16,6 +16,7 @@
     "dependencies": {
         "isomorphic-fetch": "^2.2.1",
         "rxjs": "^6.5.4",
+        "uuid": "^7.0.2",
         "websocket": "^1.0.25"
     },
     "devDependencies": {
@@ -29,6 +30,7 @@
         "@babel/preset-typescript": "^7.8.3",
         "@types/isomorphic-fetch": "^0.0.35",
         "@types/node-fetch": "2.5.4",
+        "@types/uuid": "^7.0.0",
         "@types/websocket": "1.0.0",
         "babel-jest": "^25.1.0",
         "jest": "^25.1.0",

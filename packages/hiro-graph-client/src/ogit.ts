@@ -9,10 +9,12 @@ export declare namespace OGIT {
     'ogit/_is-deleted': boolean;
     'ogit/_graphtype': string;
     'ogit/_xid': string;
+    'ogit/_organization'?: string;
+    'ogit/_scope'?: string;
   }
 
   export interface Node extends SafeNode {
-    [key: string]: string | number | boolean;
+    [key: string]: string | number | boolean | undefined;
   }
 
   export interface Edge extends SafeNode {
@@ -34,8 +36,6 @@ export declare namespace OGIT {
       'ogit/status'?: string;
       'ogit/Automation/processingNode'?: string;
       'ogit/Automation/originNode'?: string;
-      'ogit/_organization'?: string;
-      'ogit/_scope'?: string;
     }
     export interface KnowledgeItem extends SafeNode {
       'ogit/Automation/knowledgeItemFormalRepresentation': string;
@@ -47,8 +47,6 @@ export declare namespace OGIT {
       'ogit/description'?: string;
       'ogit/isValid'?: string;
       'ogit/name'?: string;
-      'ogit/_organization'?: string;
-      'ogit/_scope'?: string;
     }
     export interface KnowledgePool extends SafeNode {
       'ogit/_creator-app'?: string;
@@ -57,8 +55,6 @@ export declare namespace OGIT {
       'ogit/_v'?: number;
       'ogit/_v-id'?: string;
       'ogit/name'?: string;
-      'ogit/_organization'?: string;
-      'ogit/_scope'?: string;
     }
   }
 
@@ -94,8 +90,6 @@ export declare namespace OGIT {
       'ogit/_v'?: number;
       'ogit/_v-id'?: string;
       'ogit/name'?: string;
-      'ogit/_organization'?: string;
-      'ogit/_scope'?: string;
       'ogit/status'?: string;
       'ogit/email'?: string;
     }
@@ -138,6 +132,10 @@ export declare namespace OGIT {
     export interface DataScope extends SafeNode {
       'ogit/name': string;
       'ogit/description'?: string;
+    }
+
+    export interface Organization extends SafeNode {
+      'ogit/name'?: string;
     }
   }
 }
