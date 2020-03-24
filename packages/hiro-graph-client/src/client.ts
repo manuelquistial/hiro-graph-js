@@ -9,6 +9,7 @@ import { lucene, Lucene } from './lucene';
 import { Config, ConfigOptions, HttpAPI, WebsocketAPI } from './config';
 import { gremlin, GremlinQuery, GremlinQueryBuilder } from './gremlin';
 import { ensureSlash } from './utils';
+import { Token } from './token';
 
 export interface LuceneQueryOptions {
   limit?: number;
@@ -20,6 +21,21 @@ export interface GremlinQueryOptions {
   offset?: number;
 }
 
+type GraphRequestType =
+  | 'get'
+  | 'ids'
+  | 'create'
+  | 'update'
+  | 'replace'
+  | 'delete'
+  | 'connect'
+  | 'disconnect'
+  | 'query'
+  | 'writets'
+  | 'streamts'
+  | 'history'
+  | 'getme';
+
 type GremlinQueryFunction = (
   gremlin: GremlinQueryBuilder,
 ) => GremlinQueryBuilder;
@@ -30,15 +46,13 @@ export class Client {
   readonly config: Config;
 
   // @todo Move token to rxjs subject
-  private readonly token: string = '';
+  private readonly token: Token;
   private connections: Partial<
     Record<WebsocketAPI, WebSocketSubject<any>>
   > = {};
 
   constructor(endpointOrOptions: string | ConfigOptions, token?: string) {
-    if (token) {
-      this.token = token;
-    }
+    this.token = new Token(token);
 
     if (typeof endpointOrOptions === 'string') {
       this.config = new Config({ endpoint: endpointOrOptions });
@@ -47,7 +61,7 @@ export class Client {
     }
   }
 
-  fetch<T>(api: HttpAPI, path?: string, init?: ApiRequest) {
+  async fetch<T>(api: HttpAPI, path?: string, init?: ApiRequest) {
     const options = {
       headers: {},
       ...(init || {}),
@@ -60,8 +74,10 @@ export class Client {
       options.headers['Content-Type'] = 'application/json';
     }
 
+    const token = this.token.get();
+
     // @ts-ignore
-    options.headers['Authorization'] = `Bearer ${this.token}`;
+    options.headers['Authorization'] = `Bearer ${token}`;
     // @ts-ignore
     options.withCredentials = true;
     options.credentials = 'include';
@@ -78,30 +94,15 @@ export class Client {
     });
   }
 
-  request<T>(
-    api: WebsocketAPI,
-    type: string,
-    body: object,
-    headers: object = {},
-  ) {
+  private createWebsocket(api: WebsocketAPI) {
     let connection: WebSocketSubject<any>;
 
     if (!this.connections[api]) {
       connection = webSocket({
         url: this.config.getUrl('ws', api),
         WebSocketCtor: w3cwebsocket as any,
-        protocol: ['graph-2.0.0', `token-${this.token}`],
+        protocol: ['graph-2.0.0', `token-${this.token.get()}`],
       });
-
-      // @todo ensure full open/close awareness
-      connection
-        .pipe(
-          catchError((err) => {
-            // Catch bad connection close
-            throw { error: { message: err.reason, code: err.code } };
-          }),
-        )
-        .subscribe();
 
       this.connections[api] = connection;
     } else {
@@ -112,6 +113,15 @@ export class Client {
       throw Error(`No connection exists for ${api}`);
     }
 
+    return connection;
+  }
+
+  request<T, R extends GraphRequestType = GraphRequestType>(
+    api: WebsocketAPI,
+    type: R,
+    body: object,
+    headers: object = {},
+  ) {
     const id = uuid();
 
     const subject$ = new Subject<{
@@ -121,12 +131,16 @@ export class Client {
       body: T | null;
     }>();
 
+    const connection = this.createWebsocket(api);
+
     connection
       .pipe(
+        catchError((err) =>
+          of({ error: { message: err.reason, code: err.code } }),
+        ),
         map((res) => {
-          // Ensure errors are thrown
           if (res.error) {
-            throw res;
+            throw res.error;
           }
 
           return res;
@@ -145,7 +159,7 @@ export class Client {
       });
 
     connection.next({
-      _TOKEN: this.token,
+      _TOKEN: this.token.get(),
       id,
       type,
       headers,

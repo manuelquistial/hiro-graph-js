@@ -1,5 +1,3 @@
-import { map, catchError, switchMap } from 'rxjs/operators';
-
 import Client, { OGIT } from './src';
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
